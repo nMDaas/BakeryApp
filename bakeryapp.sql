@@ -291,3 +291,30 @@ DELIMITER ;
 
 -- TESTS: testing procedure
 CALL missingIngredientAmounts("Caroline", 5);
+
+-- PROCEDURE: Update amount of ingredients in inventory
+DROP PROCEDURE updateInventory;
+DELIMITER //
+CREATE PROCEDURE updateInventory(user VARCHAR(64), ingredient VARCHAR(120), amount INT)
+BEGIN
+	 DECLARE inventory INT;
+     DECLARE ingredientId INT;
+     
+     SELECT Ingredient.ingredientId 
+		INTO IngredientId
+	FROM Ingredient
+    WHERE Ingredient.ingredientName = ingredient;
+     
+     SELECT inventoryId 
+		INTO inventory
+	FROM inventory
+    WHERE inventory.user = user;
+     
+     DELETE FROM inventoryIngredient WHERE inventoryIngredient.ingredient = ingredientId;
+	 INSERT INTO inventoryIngredient (inventoryIngredient.ingredient, inventoryIngredient.inventory, inventoryIngredient.amount) VALUES (ingredientId, inventory, amount);
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL updateInventory("Caroline", "salt", 5.0);
+

@@ -310,11 +310,39 @@ BEGIN
 	FROM inventory
     WHERE inventory.user = user;
      
-     DELETE FROM inventoryIngredient WHERE inventoryIngredient.ingredient = ingredientId;
+     DELETE FROM inventoryIngredient WHERE inventoryIngredient.ingredient = ingredientId AND inventoryIngredient.inventory = inventory;
 	 INSERT INTO inventoryIngredient (inventoryIngredient.ingredient, inventoryIngredient.inventory, inventoryIngredient.amount) VALUES (ingredientId, inventory, amount);
 END //
 DELIMITER ;
 
 -- TESTS: testing procedure
 CALL updateInventory("Caroline", "salt", 5.0);
+
+-- PROCEDURE: Delete Ingredient in inventory
+DROP PROCEDURE deleteFromInventory;
+DELIMITER //
+CREATE PROCEDURE deleteFromInventory(user VARCHAR(64), ingredient VARCHAR(120))
+BEGIN
+	 DECLARE inventory INT;
+     DECLARE ingredientId INT;
+     
+     SELECT Ingredient.ingredientId 
+		INTO IngredientId
+	FROM Ingredient
+    WHERE Ingredient.ingredientName = ingredient;
+     
+     SELECT inventoryId 
+		INTO inventory
+	FROM inventory
+    WHERE inventory.user = user;
+     
+     DELETE FROM inventoryIngredient
+     WHERE inventoryIngredient.ingredient = ingredientId AND inventoryIngredient.inventory = inventory;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL deleteFromInventory("Caroline", "salt");
+
+SELECT * FROM inventoryIngredient;
 

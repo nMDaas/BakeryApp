@@ -90,6 +90,21 @@ CREATE TABLE Ingredient (
    PRIMARY KEY(ingredientId) 
 );
 
+INSERT INTO     
+Ingredient(ingredientId, ingredientName, units)    
+VALUES 
+(1, "puff pastry", "sheets"),
+(2, "crème fraîche", "cups"),
+(3, "confectioners' sugar", "tablespoons"),
+(4, "strawberries", "ounces"),
+(5, "sugar", "cups"),
+(6, "cornstarch", "tablespoons"),
+(7, "salt", "teaspoon"),
+(8, "milk", "cups"),
+(9, "eggs", "count"),
+(10, "butter", "ounces"),
+(11, "vanilla", "teaspoons");
+
 CREATE TABLE Inventory (
    inventoryId INT AUTO_INCREMENT,   
    user VARCHAR(64), 
@@ -136,6 +151,23 @@ CREATE TABLE recipeIngredient (
    CONSTRAINT `fk_ingredient` FOREIGN KEY (`ingredient`) REFERENCES `Ingredient` (`ingredientId`)
 );
 
+INSERT INTO     
+recipeIngredient(recipe, ingredient, amount)    
+VALUES 
+(1, 1, 2.0),
+(1, 2, 1.0),
+(1, 3, 2.0),
+(1, 4, 4.0),
+(5, 5, 0.33),
+(5, 6, 2.0),
+(5, 7, 0.125),
+(5, 8, 2.0),
+(5, 9, 2.0),
+(5, 10, 2.0),
+(5, 11, 2.0);
+
+
+DROP TABLE inventoryIngredient;
 CREATE TABLE inventoryIngredient (
    ingredient INT,
    inventory INT,
@@ -143,6 +175,16 @@ CREATE TABLE inventoryIngredient (
    CONSTRAINT `fk_inventory_ingredient` FOREIGN KEY (`ingredient`) REFERENCES `Ingredient` (`ingredientId`),
    CONSTRAINT `fk_inventory` FOREIGN KEY (`inventory`) REFERENCES `Inventory` (`inventoryId`)
 );
+
+INSERT INTO     
+inventoryIngredient(ingredient, inventory, amount)    
+VALUES 
+(7, 1, 0.125),
+(8, 1, 1.0),
+(9, 1, 1.0),
+(10, 1, 1.5),
+(11, 1, 1.5);
+
 
 DROP TABLE saves;
 CREATE TABLE saves (
@@ -222,3 +264,30 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL viewRecommendedRecipes("Caroline");
 
+-- PROCEDURE: finding which ingredients are missing from the inventory
+-- any value that is null or > 0 means that a certain amt of ingredient is required 
+-- should be considered when calling from Eclipse ^^
+DROP PROCEDURE missingIngredientAmounts;
+DELIMITER //
+CREATE PROCEDURE missingIngredientAmounts(user VARCHAR(64), recipe INT)
+BEGIN
+	SELECT DISTINCT(Ingredient.ingredientName), (recipe.AmountRequired - inventory.amountInStock) as amtOfIngredientRequired FROM
+	 (SELECT ingredient, amount as amountInStock FROM Inventory
+		JOIN InventoryIngredient
+		ON InventoryIngredient.inventory = Inventory.inventoryId
+		WHERE Inventory.user = user) as inventory
+	RIGHT OUTER JOIN
+	(SELECT ingredient, amount as AmountRequired FROM Recipe JOIN RecipeIngredient
+		ON Recipe.recipeId = RecipeIngredient.recipe
+        JOIN Ingredient 
+        ON RecipeIngredient.ingredient = Ingredient.ingredientId
+        WHERE Recipe.recipeId = recipe) as recipe
+	ON recipe.ingredient = inventory.ingredient
+    JOIN Ingredient 
+    ON recipe.ingredient = Ingredient.ingredientId;
+        
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL missingIngredientAmounts("Caroline", 5);

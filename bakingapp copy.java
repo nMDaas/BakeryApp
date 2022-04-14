@@ -84,8 +84,9 @@ public class bakingapp {
     }
   }
 
-  public boolean loggedIn(Connection conn) {
-    boolean repeat = false;
+  public String loggedIn(Connection conn) {
+    String userName = null;
+    String password = null;
     try {
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("Enter username: ");
@@ -96,19 +97,18 @@ public class bakingapp {
       Statement stmtLogIn = conn.createStatement();
       ResultSet rsLogIn = stmtLogIn.executeQuery("SELECT * FROM user WHERE username = \"" + username + "\" AND password = \"" + userPassword + "\";");
       
-      String user = null;
-      String password = null;
+     
       
       if (rsLogIn.next()) {
-        user = rsLogIn.getString("username");
+        userName = rsLogIn.getString("username");
         password = rsLogIn.getString("password");
       }
       
-      if (username.equals(user) && userPassword.equals(password)) {
-        repeat = false;
+      if (username.equals(userName) && userPassword.equals(password)) {
+        userName = userName;
       }
       else {
-        repeat = true;
+        userName = null;
         System.out.println("ERROR: Incorrect username or password. Please re-enter your username and password.");
         //throw new SQLException();
       }
@@ -118,10 +118,10 @@ public class bakingapp {
     catch (SQLException e) {
       e.printStackTrace();
     }
-    return repeat;
+    return userName;
   }
 
-  public Boolean makeAcc(Boolean exists, Connection conn) {
+  public String makeAcc(Connection conn) {
     try {
 
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
@@ -135,20 +135,119 @@ public class bakingapp {
           + userPassword + "');";
 
       this.executeUpdate(this.getConnection(), createUser);
-      return false;
+      return username;
     }
     catch (SQLException e) {
       System.out.println(
           "ERROR: Unable to create new account. Make sure your username is unique, and please try again.");
-      return true;
+      return null;
     }
   }
+  
+  public String directory() {
+    try {
+      System.out.println("Welcome to Bake It Till You Make It!");
+      System.out.println("    To update your PROFILE                    : Type p");
+      System.out.println("    To update your INVENTORY                  : Type i");
+      System.out.println("    To check out RECOMMENDED RECIPES for you  : Type r");
+      System.out.println("    To view your SAVED recipes                : Type s ");
+      
+      Scanner myObj = new Scanner(System.in); // Create a Scanner object
+      System.out.println("What would you like to do?");
+      String doWhat = myObj.nextLine(); // Read user input
+     
+      return doWhat;
+    }
+    finally {}
+  }
+  
+  public void Recommended(Connection conn, String username) throws SQLException {
+      java.sql.CallableStatement cStmt = conn.prepareCall("{CALL viewRecommendedRecipes(?)}");
+      cStmt.setString(1, username);
+      ResultSet rsRecommended = cStmt.executeQuery();
+      if (rsRecommended.next() == false) {
+        System.out.println("These are ALL the available recipes. Update your dessert type preferences in your Profile to find recipes for YOU.");
+        System.out.println("");
+        java.sql.CallableStatement cStmtAll = conn.prepareCall("{CALL viewAllRecipes()}");
+        ResultSet rs = cStmtAll.executeQuery();
+        while (rs.next()) {
+          String id = rs.getString("recipeId");
+          String name = rs.getString("recipeName");
+          String type = rs.getString("typeName");
+          String writer = rs.getString("writer");
+          
+          System.out.println(id + ": " + name);
+          System.out.println("        dessert type: " + type);
+          System.out.println("        writer: " + writer);
+          System.out.println("");
+        }
+      }
+      while (rsRecommended.next()) {
+        String id = rsRecommended.getString("recipeId");
+        String name = rsRecommended.getString("recipeName");
+        String type = rsRecommended.getString("typeName");
+        String writer = rsRecommended.getString("writer");
+        
+        System.out.println(id + ": " + name);
+        System.out.println("        dessert type: " + type);
+        System.out.println("        writer: " + writer);
+        System.out.println("");
+      }
+      
+      Scanner myObj = new Scanner(System.in); // Create a Scanner object
+      System.out.println("Enter the # of a recipe to select it or type 'd' to go back to your directory");
+      String rChoice = myObj.nextLine(); // Read user input
+      
+      if (rChoice.equals("d")) {
+        this.directory();
+      }
+
+  }
+  
+  
+  public void Saved(Connection conn, String username) throws SQLException {
+    try {
+    java.sql.CallableStatement cStmtSaved = conn.prepareCall("{CALL viewSavedRecipes(?)}");
+    cStmtSaved.setString(1, username);
+    ResultSet rsSaved = cStmtSaved.executeQuery();
+//    System.out.println("query = " + rsSaved.next());
+//    if (rsSaved.next() == false) {
+//    }
+      while (rsSaved.next() == false) {
+      System.out.println("You have no saved recipes. Save recipes from Recommended Recipes.");
+      }
+    
+      while (rsSaved.next()) {
+        String id = rsSaved.getString("recipeId");
+        String name = rsSaved.getString("recipeName");
+        String type = rsSaved.getString("typeName");
+        String writer = rsSaved.getString("writer");
+        
+        System.out.println(id + ": " + name);
+        System.out.println("        dessert type: " + type);
+        System.out.println("        writer: " + writer);
+        System.out.println("");
+      }
+      
+      Scanner myObj = new Scanner(System.in); // Create a Scanner object
+      System.out.println("Enter the # of a recipe to select it or type 'd' to go back to your directory");
+      String rChoice = myObj.nextLine(); // Read user input
+      
+      if (rChoice.equals("d")) {
+        this.directory();
+      }
+    
+    }
+    finally {}
+    
+
+}
 
   /**
    * Connect to MySQL and do some stuff.
    */
   public void run() {
-
+    String username = null;
     // Connect to MySQL
     Connection conn = null;
     try {
@@ -171,23 +270,39 @@ public class bakingapp {
       // then being redirected to login
 
       if (choice == 1) {
-        Boolean repeat = true;
-        while (repeat) {
-          repeat = this.loggedIn(conn);
+        while (username == null) {
+          username = this.loggedIn(conn);
         }
         System.out.println("User logged in.");
       }
       
       if (choice == 2) {
-        Boolean exists = true;
-        while (exists) {
-          exists = this.makeAcc(exists, conn);
+        while (username == null) {
+          username = this.makeAcc(conn);
         }
         System.out.println("User signed up.");
       }
     }
     finally {
-      System.out.println("User logged in.");
+      //System.out.println("User logged in.");
+    }
+    
+    try {
+      String doThis = this.directory();
+
+      if (doThis.equals("r")) {
+        this.Recommended(conn, username);
+        }
+      if (doThis.equals("s")) {
+        this.Saved(conn, username);
+        }
+      }
+    catch (SQLException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } 
+    finally {
+      //System.out.println("User logged in.");
     }
 //    catch (SQLException e) {
 //      System.out.println("ERROR: cannot create new account");

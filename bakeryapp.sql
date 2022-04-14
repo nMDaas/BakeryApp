@@ -251,7 +251,7 @@ DROP PROCEDURE viewRecommendedRecipes;
 DELIMITER //
 CREATE PROCEDURE viewRecommendedRecipes(user VARCHAR(64))
 BEGIN
-	 SELECT DISTINCT(recipeName), instructions, dessertType.typeName, writer
+	 SELECT DISTINCT(recipeName), Recipe.recipeId, instructions, dessertType.typeName, writer
 		FROM Recipe LEFT OUTER JOIN userDessertType  
         ON userDessertType.dessertType = Recipe.type
         JOIN dessertType
@@ -263,6 +263,23 @@ DELIMITER ;
 
 -- TESTS: testing procedure
 CALL viewRecommendedRecipes("Caroline");
+
+-- PROCEDURE: view all recipes
+DROP PROCEDURE viewAllRecipes;
+DELIMITER //
+CREATE PROCEDURE viewAllRecipes()
+BEGIN
+	 SELECT DISTINCT(recipeName), Recipe.recipeId, instructions, dessertType.typeName, writer
+		FROM Recipe LEFT OUTER JOIN userDessertType  
+        ON userDessertType.dessertType = Recipe.type
+        JOIN dessertType
+        ON dessertType.typeId = Recipe.type;
+        
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL viewAllRecipes();
 
 -- PROCEDURE: finding which ingredients are missing from the inventory
 -- any value that is null or > 0 means that a certain amt of ingredient is required 

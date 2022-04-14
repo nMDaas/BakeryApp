@@ -344,5 +344,38 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL deleteFromInventory("Caroline", "salt");
 
-SELECT * FROM inventoryIngredient;
+-- PROCEDURE: Delete a dessert type interest
+DROP PROCEDURE deleteDessertType;
+DELIMITER //
+CREATE PROCEDURE deleteDessertType(user VARCHAR(64), dessert VARCHAR(10))
+BEGIN
+	 DECLARE dessertId INT;
+     
+	SELECT dessertType.typeId 
+		INTO dessertId
+	FROM dessertType
+    WHERE dessertType.typeName = dessert;
+     
+     DELETE FROM userDessertType
+     WHERE userDessertType.user = user AND userDessertType.dessertType = dessertId;
+END //
+DELIMITER ;
 
+-- TESTS: testing procedure
+CALL deleteDessertType("Natasha", "biscuits");
+
+-- TRIGGER: Updates CanBeMade upon inserting into saves 
+DROP trigger canBeMade;
+DELIMITER //
+CREATE TRIGGER canBeMade
+AFTER INSERT ON saves 
+FOR EACH ROW
+BEGIN    
+	-- OLD.canBeMade = true;
+	CALL initialize_num_attack(NEW.location);
+	-- check sum and update
+END //
+
+DELIMITER ;
+
+SELECT * FROM saves;

@@ -385,6 +385,58 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL deleteDessertType("Natasha", "biscuits");
 
+-- PROCEDURE: View a recipe
+DROP PROCEDURE viewRecipe;
+DELIMITER //
+CREATE PROCEDURE viewRecipe(recipeNum INT)
+BEGIN
+	SELECT Recipe.recipeName, Recipe.instructions
+	FROM Recipe
+    WHERE Recipe.recipeId = recipeNum;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL viewRecipe(1);
+
+SELECT * FROM saves;
+
+-- PROCEDURE: Is this recipe already saved?
+DROP PROCEDURE aSavedRecipe;
+DELIMITER //
+CREATE PROCEDURE aSavedRecipe(recipeNum INT, user VARCHAR(64))
+BEGIN
+	SELECT *
+	FROM saves
+    WHERE saves.recipe = recipeNum AND saves.user = user;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL aSavedRecipe(1, "Natasha");
+
+-- PROCEDURE: save a recipe
+DROP PROCEDURE saveRecipe;
+DELIMITER //
+CREATE PROCEDURE saveRecipe(recipeNum INT, user VARCHAR(64))
+BEGIN
+	DECLARE inventory INT;
+     
+	SELECT inventory.inventoryId 
+		INTO inventory
+	FROM inventory
+    WHERE inventory.user = user;
+    
+	INSERT INTO     
+		saves(user, inventory, recipe, canBeMade)    
+		VALUES 
+		(user, inventory, recipeNum, false);
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL saveRecipe(5, "Caroline");
+
 -- TRIGGER: Updates CanBeMade upon inserting into saves 
 DROP trigger canBeMade;
 DELIMITER //

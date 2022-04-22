@@ -313,6 +313,8 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL missingIngredientAmounts("Caroline", 5);
 
+SELECT * FROM saves;
+
 -- PROCEDURE: Update amount of ingredients in inventory
 DROP PROCEDURE updateInventory;
 DELIMITER //

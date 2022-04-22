@@ -201,8 +201,12 @@ INSERT INTO
 saves(user, inventory, recipe, canBeMade)    
 VALUES 
 ("Natasha", 1, 2, false), 
+("Natasha", 2, 1, false),
+("Natasha", 2, 6, false),
 ("Caroline", 2, 1, false);
 
+Use bakingApp;
+SELECT * FROM saves;
 
 -- FUCTION: Check if a username exists
 DROP FUNCTION IF EXISTS usernameExists;
@@ -244,7 +248,7 @@ END //
 DELIMITER ;
 
 -- TESTS: testing procedure
-CALL viewSavedRecipes("Caroline");
+CALL viewSavedRecipes("Natasha");
 
 -- PROCEDURE: view recommended recipes
 DROP PROCEDURE viewRecommendedRecipes;

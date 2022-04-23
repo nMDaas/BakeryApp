@@ -18,13 +18,17 @@ VALUES
 ("Sweet Magnolias", "iAmABakery123");
 
 CREATE TABLE bakery (
-   name VARCHAR(120),
    bakeryId VARCHAR(64),  
    phoneNo INT,
    address VARCHAR(200),
    PRIMARY KEY(bakeryId), 
    CONSTRAINT `fk_bakeryId` FOREIGN KEY (`bakeryId`) REFERENCES `user` (`username`)
 );
+
+INSERT INTO     
+bakery(bakeryId, phoneNo, address)    
+VALUES 
+("Sweet Magnolias", 1234567891, "123 Huntington Avenue, Boston, 510203");
 
 DROP TABLE dessertType;
 CREATE TABLE dessertType (
@@ -438,6 +442,43 @@ DELIMITER ;
 
 -- TESTS: testing procedure
 CALL saveRecipe(5, "Caroline");
+
+-- PROCEDURE: checks whether a user is a bakery
+DROP PROCEDURE aBakery;
+DELIMITER //
+CREATE PROCEDURE aBakery(user VARCHAR(64))
+BEGIN
+	SELECT * FROM bakery 
+		WHERE bakeryId = user;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL aBakery("Sweet Magnolias");
+
+-- PROCEDURE: updates phone number of bakery
+DROP PROCEDURE updatePhone;
+DELIMITER //
+CREATE PROCEDURE updatePhone(user VARCHAR(64), newNum INT)
+BEGIN
+	UPDATE bakery SET bakery.phoneNo = newNum WHERE bakery.bakeryId = user;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL updatePhone("Sweet Magnolias", 1231231231);
+
+-- PROCEDURE: updates address of bakery
+DROP PROCEDURE updateAddress;
+DELIMITER //
+CREATE PROCEDURE updateAddress(user VARCHAR(64), address VARCHAR(100))
+BEGIN
+	UPDATE bakery SET bakery.address = address WHERE bakery.bakeryId = user;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL updateAddress("Sweet Magnolias", "test");
 
 -- TRIGGER: Updates CanBeMade upon inserting into saves 
 DROP trigger canBeMade;

@@ -107,7 +107,8 @@ VALUES
 (8, "milk", "cups"),
 (9, "eggs", "count"),
 (10, "butter", "ounces"),
-(11, "vanilla", "teaspoons");
+(11, "vanilla", "teaspoons"), 
+(12, "baking powder", "teaspoons");
 
 CREATE TABLE Inventory (
    inventoryId INT AUTO_INCREMENT,   

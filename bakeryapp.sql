@@ -288,7 +288,6 @@ DELIMITER ;
 
 -- TESTS: testing procedure
 CALL viewAllRecipes();
-
 -- PROCEDURE: finding which ingredients are missing from the inventory
 -- any value that is null or > 0 means that a certain amt of ingredient is required 
 -- should be considered when calling from Eclipse ^^
@@ -296,13 +295,13 @@ DROP PROCEDURE missingIngredientAmounts;
 DELIMITER //
 CREATE PROCEDURE missingIngredientAmounts(user VARCHAR(64), recipe INT)
 BEGIN
-	SELECT DISTINCT(Ingredient.ingredientName), (recipe.AmountRequired - inventory.amountInStock) as amtOfIngredientRequired FROM
+	SELECT DISTINCT(Ingredient.ingredientName), (recipe.AmountRequired - inventory.amountInStock) as amtOfIngredientRequired, recipe.units FROM
 	 (SELECT ingredient, amount as amountInStock FROM Inventory
 		JOIN InventoryIngredient
 		ON InventoryIngredient.inventory = Inventory.inventoryId
 		WHERE Inventory.user = user) as inventory
 	RIGHT OUTER JOIN
-	(SELECT ingredient, amount as AmountRequired FROM Recipe JOIN RecipeIngredient
+	(SELECT ingredient, amount as AmountRequired, units FROM Recipe JOIN RecipeIngredient
 		ON Recipe.recipeId = RecipeIngredient.recipe
         JOIN Ingredient 
         ON RecipeIngredient.ingredient = Ingredient.ingredientId
@@ -310,6 +309,7 @@ BEGIN
 	ON recipe.ingredient = inventory.ingredient
     JOIN Ingredient 
     ON recipe.ingredient = Ingredient.ingredientId;
+    
         
 END //
 DELIMITER ;
@@ -480,18 +480,65 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL updateAddress("Sweet Magnolias", "test");
 
--- TRIGGER: Updates CanBeMade upon inserting into saves 
-DROP trigger canBeMade;
-DELIMITER //
-CREATE TRIGGER canBeMade
-AFTER INSERT ON saves 
-FOR EACH ROW
-BEGIN    
-	-- OLD.canBeMade = true;
-	CALL initialize_num_attack(NEW.location);
-	-- check sum and update
-END //
+SELECT * FROM userDessertType;
+SELECT * FROM dessertType;
 
+-- PROCEDURE: find a user's dessert types
+DROP PROCEDURE userTypes;
+DELIMITER //
+CREATE PROCEDURE userTypes(user VARCHAR(64))
+BEGIN
+	SELECT dessertType.typeName FROM userDessertType JOIN dessertType
+		ON userDessertType.dessertType = dessertType.typeId
+        WHERE userDessertType.user = user;
+END //
 DELIMITER ;
 
-SELECT * FROM saves;
+-- TESTS: testing procedure
+CALL userTypes("Natasha");
+
+-- PROCEDURE: find whether a dessert type is a user's dessert type
+DROP PROCEDURE aUserType;
+DELIMITER //
+CREATE PROCEDURE aUserType(user VARCHAR(64), type VARCHAR(64))
+BEGIN
+	DECLARE typeId INT; 
+    
+    SELECT dessertType.typeId 
+		INTO typeId
+        FROM dessertType
+        WHERE dessertType.typeName = type;
+        
+	SELECT * FROM userDessertType 
+        WHERE userDessertType.user = user AND userDessertType.dessertType = typeId;
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL aUserType("Natasha", "pastry");
+
+SELECT * FROM inventory;
+SELECT * FROM inventoryIngredient;
+-- PROCEDURE: returns a table of inventory values and ingredient names
+DROP PROCEDURE getInventory;
+DELIMITER //
+CREATE PROCEDURE getInventory(puser VARCHAR(64))
+BEGIN
+DECLARE inventoryInt INT;
+
+SELECT inventoryId
+	INTO inventoryInt
+    FROM inventory 
+    WHERE inventory.user = puser;
+
+SELECT * FROM inventoryIngredient JOIN (SELECT ingredientId AS id, ingredientName, units FROM ingredient) AS T
+ON T.id = inventoryIngredient.ingredient
+WHERE inventory = inventoryInt;
+
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL getInventory("Caroline");
+CALL getInventory("Natasha");
+

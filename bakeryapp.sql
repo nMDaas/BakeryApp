@@ -23,6 +23,7 @@ CREATE TABLE bakery (
    address VARCHAR(200),
    PRIMARY KEY(bakeryId), 
    CONSTRAINT `fk_bakeryId` FOREIGN KEY (`bakeryId`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -56,8 +57,10 @@ CREATE TABLE Recipe (
    type INT,
    writer VARCHAR(64),
    PRIMARY KEY(recipeId), 
-   CONSTRAINT `fk_recipe_type` FOREIGN KEY (`type`) REFERENCES `dessertType` (`typeId`),
+   CONSTRAINT `fk_recipe_type` FOREIGN KEY (`type`) REFERENCES `dessertType` (`typeId`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_written_by` FOREIGN KEY (`writer`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -94,6 +97,8 @@ CREATE TABLE Ingredient (
    PRIMARY KEY(ingredientId) 
 );
 
+SELECT COUNT(*) FROM Ingredient;
+
 INSERT INTO     
 Ingredient(ingredientId, ingredientName, units)    
 VALUES 
@@ -115,6 +120,7 @@ CREATE TABLE Inventory (
    user VARCHAR(64), 
    PRIMARY KEY(inventoryId), 
    CONSTRAINT `fk_user_inventory` FOREIGN KEY (`user`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -126,8 +132,10 @@ VALUES
 CREATE TABLE userDessertType (
    dessertType INT,
    user VARCHAR(64), 
-   CONSTRAINT `fk_user_dessert_type` FOREIGN KEY (`user`) REFERENCES `user` (`username`),
+   CONSTRAINT `fk_user_dessert_type` FOREIGN KEY (`user`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_dessert_type` FOREIGN KEY (`dessertType`) REFERENCES `dessertType` (`typeId`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -144,16 +152,20 @@ CREATE TABLE writtenRecipe (
    recipe INT,
    writer VARCHAR(64),
    dateWritten DATE,
-   CONSTRAINT `fk_written_recipe` FOREIGN KEY (`recipe`) REFERENCES `Recipe` (`recipeId`),
+   CONSTRAINT `fk_written_recipe` FOREIGN KEY (`recipe`) REFERENCES `Recipe` (`recipeId`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_written_writer` FOREIGN KEY (`writer`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE recipeIngredient (
    recipe INT,
    ingredient INT,
    amount DOUBLE,
-   CONSTRAINT `fk_recipe_ingredient` FOREIGN KEY (`recipe`) REFERENCES `Recipe` (`recipeId`),
+   CONSTRAINT `fk_recipe_ingredient` FOREIGN KEY (`recipe`) REFERENCES `Recipe` (`recipeId`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_ingredient` FOREIGN KEY (`ingredient`) REFERENCES `Ingredient` (`ingredientId`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -177,8 +189,10 @@ CREATE TABLE inventoryIngredient (
    ingredient INT,
    inventory INT,
    amount DOUBLE,
-   CONSTRAINT `fk_inventory_ingredient` FOREIGN KEY (`ingredient`) REFERENCES `Ingredient` (`ingredientId`),
+   CONSTRAINT `fk_inventory_ingredient` FOREIGN KEY (`ingredient`) REFERENCES `Ingredient` (`ingredientId`) 
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_inventory` FOREIGN KEY (`inventory`) REFERENCES `Inventory` (`inventoryId`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -190,6 +204,8 @@ VALUES
 (10, 1, 1.5),
 (11, 1, 1.5);
 
+SELECT * FROM inventory;
+
 
 DROP TABLE saves;
 CREATE TABLE saves (
@@ -197,9 +213,12 @@ CREATE TABLE saves (
    inventory INT,
    recipe INT,
    canBeMade boolean,
-   CONSTRAINT `fk_user_saver` FOREIGN KEY (`user`) REFERENCES `user` (`username`),
-   CONSTRAINT `fk_inventory_save` FOREIGN KEY (`inventory`) REFERENCES `Inventory` (`inventoryId`),
+   CONSTRAINT `fk_user_saver` FOREIGN KEY (`user`) REFERENCES `user` (`username`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
+   CONSTRAINT `fk_inventory_save` FOREIGN KEY (`inventory`) REFERENCES `Inventory` (`inventoryId`)
+   ON UPDATE CASCADE ON DELETE CASCADE,
    CONSTRAINT `fk_recipe_saved` FOREIGN KEY (`recipe`) REFERENCES `Recipe` (`recipeId`)
+   ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 INSERT INTO     
@@ -209,9 +228,6 @@ VALUES
 ("Natasha", 2, 1, false),
 ("Natasha", 2, 6, false),
 ("Caroline", 2, 1, false);
-
-Use bakingApp;
-SELECT * FROM saves;
 
 -- FUCTION: Check if a username exists
 DROP FUNCTION IF EXISTS usernameExists;
@@ -318,7 +334,7 @@ DELIMITER ;
 -- TESTS: testing procedure
 CALL missingIngredientAmounts("Caroline", 5);
 
-SELECT * FROM saves;
+SELECT * FROM ingredient;
 
 -- PROCEDURE: Update amount of ingredients in inventory
 DROP PROCEDURE updateInventory;
@@ -543,3 +559,108 @@ DELIMITER ;
 CALL getInventory("Caroline");
 CALL getInventory("Natasha");
 
+SELECT * FROM inventory;
+
+-- TRIGGER: sets all the ingredients in inventory to 0 when the account is created
+SELECT * FROM ingredientInventory;
+DROP TRIGGER IF EXISTS defaultInventory;
+DELIMITER //
+CREATE TRIGGER defaultInventory AFTER INSERT
+ON user
+FOR EACH ROW 
+BEGIN
+DECLARE counts INT;
+DECLARE currents INT DEFAULT 0;
+DECLARE inventoryID INT;
+DECLARE inventoryCount INT;
+
+
+SELECT COUNT(*) INTO inventoryCount FROM Inventory;
+SET inventoryCount = inventoryCount + 1;
+
+INSERT INTO     
+	inventory(inventoryId, user)    
+	VALUES 
+	(inventoryCount, NEW.username);
+END //
+DELIMITER ;
+
+SELECT * FROM inventory;
+
+INSERT INTO     
+	user(username, password)    
+	VALUES 
+	("xyz", "xyz");
+    
+-- PROCEDURE: inserts into inventoryIngredient
+DROP PROCEDURE addIngredientToInventory;
+DELIMITER //
+CREATE PROCEDURE addIngredientToInventory(ingredient INT, inventory INT, amount INT)
+BEGIN
+
+ INSERT INTO inventoryIngredient(ingredient, inventory, amount)
+	VALUES (ingredient, inventory, amount);
+
+
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL addIngredientToInventory(3, 3, 100);
+SELECT * FROM inventoryIngredient;
+SELECT * FROM user;
+SELECT * FROM inventory;
+
+-- PROCEDURE: inserts a new Ingredient
+DROP PROCEDURE newIngredient;
+DELIMITER //
+CREATE PROCEDURE newIngredient(ingredientNum INT, ingredient VARCHAR(64), units VARCHAR(64))
+BEGIN
+
+ INSERT INTO Ingredient(ingredientId, ingredientName, units)
+	VALUES (ingredientNum, ingredient, units);
+
+
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+CALL addIngredientToInventory(3, 3, 100);
+
+-- PROCEDURE: inserts into recipeIngredient
+DROP PROCEDURE addIngredientToRecipe;
+DELIMITER //
+CREATE PROCEDURE addIngredientToRecipe(recipe INT, ingredient INT, amount INT)
+BEGIN
+
+ INSERT INTO recipeIngredient(recipe, ingredient, amount)
+	VALUES (recipe, ingredient, amount);
+
+
+END //
+DELIMITER ;
+
+-- TESTS: testing procedure
+INSERT INTO Recipe(recipeId, recipeName, instructions, type, writer) 
+VALUES (21, "Gingerbread cookies", "xyz", 3, "Caroline");
+INSERT INTO ingredient(ingredientId, ingredientName, units) 
+VALUES (27, "ginger", "pieces");
+
+-- CRUD operations 
+SELECT * FROM user;
+
+	-- add to Inventory (CREATE)
+SELECT * FROM inventory;
+SELECT * FROM ingredient;
+SELECT * FROM inventoryIngredient;
+
+	-- read written Recipes (READ)
+SELECT * FROM Recipe WHERE writer = 'Caroline';
+
+	-- update dessert types (UPDATE)
+SELECT * FROM dessertType;
+SELECT * FROM userDessertType WHERE user = 'Caroline';
+
+	-- unsave Recipe (DELETE)
+SELECT * FROM Recipe;
+SELECT * FROM saves WHERE user = 'Caroline';

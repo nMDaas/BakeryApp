@@ -7,6 +7,7 @@ db.mysql.url="jdbc:mysql://localhost:3306/db?characterEncoding=UTF-8&useSSL=fals
 */
 package javamysql;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -126,11 +127,12 @@ public class bakingapp {
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("Enter a new username: ");
       String username = myObj.nextLine(); // Read user input
+      Scanner myObj2 = new Scanner(System.in);
       System.out.println("Enter a new password: ");
-      String userPassword = myObj.nextLine(); // Read user input
+      String userPassword = myObj2.nextLine(); // Read user input
 
-      String createUser = "INSERT INTO user(username, password) VALUES ('" + username + "', '"
-          + userPassword + "');";
+      String createUser = "INSERT INTO user(username, password) VALUES (\"" + username + "\", \""
+          + userPassword + "\");";
 
       this.executeUpdate(this.getConnection(), createUser);
       return username;
@@ -138,68 +140,80 @@ public class bakingapp {
     catch (SQLException e) {
       System.out.println(
           "ERROR: Unable to create new account. Make sure your username is unique, and please try again.");
+      e.printStackTrace();
       return null;
     }
   }
-  
+
   public void updateBakery(Connection conn, String username, boolean check) throws SQLException {
     while (check == false) {
-    try {
-      
-      java.sql.CallableStatement cStmtBakeryInfo = conn.prepareCall("{CALL aBakery(?)}");
-      cStmtBakeryInfo.setString(1, username);
-      ResultSet reBakery = cStmtBakeryInfo.executeQuery();
-      
-      while (reBakery.next()) {
-        String phone = reBakery.getString("phoneNo");
-        String address = reBakery.getString("address");
-        
-        System.out.println("Phone No:   " + phone + "(Type p to update)");
-        System.out.println("Address:    " + address + "(Type a to update)");
+      try {
+
+        java.sql.CallableStatement cStmtBakeryInfo = conn.prepareCall("{CALL aBakery(?)}");
+        cStmtBakeryInfo.setString(1, username);
+        ResultSet reBakery = cStmtBakeryInfo.executeQuery();
+
+        while (reBakery.next()) {
+          String phone = reBakery.getString("phoneNo");
+          String address = reBakery.getString("address");
+
+          System.out.println("Phone No:   " + phone + "(Type p to update)");
+          System.out.println("Address:    " + address + "(Type a to update)");
+        }
+
+        System.out.println("Type b to go back");
+
+        Scanner myObj = new Scanner(System.in); // Create a Scanner object
+        String doWhat = myObj.nextLine(); // Read user input
+
+        if (doWhat.equals("p")) {
+          System.out.println("Enter phone number:");
+          String phone = myObj.nextLine(); // Read user input
+          try {
+            java.sql.CallableStatement cStmtUpdatePhone = conn
+                .prepareCall("{CALL updatePhone(?, ?)}");
+            cStmtUpdatePhone.setString(1, username);
+            cStmtUpdatePhone.setInt(2, Integer.parseInt(phone));
+            ResultSet reUpdatePhone = cStmtUpdatePhone.executeQuery();
+            System.out.println("Phone number updated!");
+            this.bakery(conn, username, true, false);
+            check = true;
+          }
+          catch (java.lang.NumberFormatException e) {
+            System.out.println("Invalid phone number");
+          }
+          finally {
+          }
+        }
+        else if (doWhat.equals("a")) {
+          System.out.println("Enter your address:");
+          String address = myObj.nextLine(); // Read user input
+          java.sql.CallableStatement cStmtUpdateAddress = conn
+              .prepareCall("{CALL updateAddress(?, ?)}");
+          cStmtUpdateAddress.setString(1, username);
+          cStmtUpdateAddress.setString(2, address);
+          ResultSet reUpdateAddress = cStmtUpdateAddress.executeQuery();
+          System.out.println("Address updated!");
+          this.bakery(conn, username, true, false);
+          check = true;
+        }
+        else if (doWhat.equals("b")) {
+          this.bakery(conn, username, true, false);
+          check = true;
+        }
+
+        else if (check == false) {
+          System.out.println(".");
+          this.updateBakery(conn, username, check);
+        }
       }
-      
-      System.out.println("Type b to go back");
-      
-      Scanner myObj = new Scanner(System.in); // Create a Scanner object
-      String doWhat = myObj.nextLine(); // Read user input
-      
-      if (doWhat.equals("p")) {
-        System.out.println("Enter phone number:");
-        String phone = myObj.nextLine(); // Read user input
-        java.sql.CallableStatement cStmtUpdatePhone = conn.prepareCall("{CALL updatePhone(?, ?)}");
-        cStmtUpdatePhone.setString(1, username);
-        cStmtUpdatePhone.setInt(2, Integer.parseInt(phone));
-        ResultSet reUpdatePhone = cStmtUpdatePhone.executeQuery();
-        System.out.println("Phone number updated!");
-        this.bakery(conn, username, true, false);
-        check = true;
+      finally {
       }
-      else if (doWhat.equals("a") ) {
-        System.out.println("Enter your address:");
-        String address = myObj.nextLine(); // Read user input
-        java.sql.CallableStatement cStmtUpdateAddress = conn.prepareCall("{CALL updateAddress(?, ?)}");
-        cStmtUpdateAddress.setString(1, username);
-        cStmtUpdateAddress.setString(2, address);
-        ResultSet reUpdateAddress = cStmtUpdateAddress.executeQuery();
-        System.out.println("Address updated!");
-        this.bakery(conn, username, true, false);
-        check = true;
-      }
-      else if (doWhat.equals("b")) {
-        this.bakery(conn, username, true, false);
-        check = true;
-      }
-      
-      else if (check == false) {
-        System.out.println(".");
-        this.updateBakery(conn, username, check);
-      }
-    }
-    finally {}
     }
   }
-  
-  public void bakery(Connection conn, String username, boolean bakery, boolean check) throws SQLException {
+
+  public void bakery(Connection conn, String username, boolean bakery, boolean check)
+      throws SQLException {
     try {
       if (bakery) {
         System.out.println("Switch to personal account - Type 's'");
@@ -212,7 +226,7 @@ public class bakingapp {
 
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       String doWhat = myObj.nextLine(); // Read user input
-      
+
       if (doWhat.equals("s") && bakery) {
         String deleteBakery = "DELETE FROM bakery WHERE bakery.bakeryId = \"" + username + ";";
         this.executeUpdate(conn, deleteBakery);
@@ -220,12 +234,13 @@ public class bakingapp {
         check = true;
 
       }
-      else if (doWhat.equals("s")  && !bakery) {
+      else if (doWhat.equals("s") && !bakery) {
         try {
-          String createString = "INSERT INTO bakery(bakeryId, phoneNo, address) VALUES (\"" + username + "\", NULL, NULL)";
+          String createString = "INSERT INTO bakery(bakeryId, phoneNo, address) VALUES (\""
+              + username + "\", NULL, NULL)";
           this.executeUpdate(conn, createString);
           this.updateBakery(conn, username, false);
-         // System.out.println("Type 'b' to back to your account");
+          // System.out.println("Type 'b' to back to your account");
           String doNext = myObj.nextLine(); // Read user input
           check = true;
         }
@@ -259,33 +274,34 @@ public class bakingapp {
         this.bakery(conn, username, bakery, check);
       }
     }
-    finally {}
+    finally {
+    }
   }
-  
+
   public void account(Connection conn, String username, boolean check) throws SQLException {
     try {
       System.out.println("username: @" + username);
       System.out.println("");
-      
+
       java.sql.CallableStatement cStmt = conn.prepareCall("{CALL aBakery(?)}");
       cStmt.setString(1, username);
       ResultSet reBakery = cStmt.executeQuery();
       boolean bakery = false;
       if (reBakery.next()) {
         bakery = true;
-        System.out.println("Bakery   - Type i to change account type to be individually owned");
+        System.out.println("Bakery   - Type i to view details");
       }
       else {
         System.out.println("Not A Bakery   - Type i to change account type to be bakery owned");
       }
-      
+
       System.out.println("");
       System.out.println("Type 'b' to back to your profile");
 
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("What would you like to do?");
       String doWhat = myObj.nextLine(); // Read user input
-      
+
       if (doWhat.equals("b")) {
         this.profile(conn, username, false);
         check = true;
@@ -295,12 +311,14 @@ public class bakingapp {
         check = true;
       }
       else if (check == false) {
+        System.out.println("Invalid input. Please try again.");
         this.account(conn, username, check);
       }
     }
-    finally {}
+    finally {
+    }
   }
-  
+
   public void dessertTypes(Connection conn, String username) throws SQLException {
     try {
       java.sql.CallableStatement cStmt = conn.prepareCall("{CALL userTypes(?)}");
@@ -313,59 +331,82 @@ public class bakingapp {
       }
       System.out.println("");
       System.out.println("Available dessert types: ");
-      
+
       Statement stmt = conn.createStatement();
       ResultSet rs = stmt.executeQuery("SELECT * FROM dessertType;");
       while (rs.next()) {
         String type = rs.getString("typeName");
         System.out.println(type);
       }
-      
+
+      boolean check = false;
+
       System.out.println("Type a dessert type to add or remove it from your dessert types.");
+      System.out.println("Type 'b' to go back to profile.");
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       String type = myObj.nextLine(); // Read user input
-      
-      java.sql.CallableStatement cStmtAType = conn.prepareCall("{CALL aUserType(?, ?)}");
-      cStmtAType.setString(1, username);
-      cStmtAType.setString(2, type);
-      ResultSet reAType = cStmtAType.executeQuery();
-      if (reAType.next()) {
-        int typeId = reAType.getInt("dessertType");
-        String removeType = "DELETE FROM userDessertType WHERE userDessertType.user = \"" + username + "\" AND userDessertType.dessertType = " + typeId + ";";
-        this.executeUpdate(conn, removeType);
-        this.dessertTypes(conn, username);
+
+      if (type.equals("b")) {
+        this.profile(conn, username, false);
+        check = true;
       }
       else {
-        Statement stmtId = conn.createStatement();
-        ResultSet rsId = stmtId.executeQuery("SELECT dessertType.typeId FROM dessertType WHERE dessertType.typeName = \"" + type + "\";");
-        while (rsId.next()) {
-          int id = rsId.getInt("typeId");
-          String addType = "INSERT INTO userDessertType(dessertType, user) VALUES (" + id + ", \"" + username + "\");";
-          this.executeUpdate(conn, addType);
+
+        java.sql.CallableStatement cStmtAType = conn.prepareCall("{CALL aUserType(?, ?)}");
+        cStmtAType.setString(1, username);
+        cStmtAType.setString(2, type);
+        ResultSet reAType = cStmtAType.executeQuery();
+        if (reAType.next()) {
+          int typeId = reAType.getInt("dessertType");
+          String removeType = "DELETE FROM userDessertType WHERE userDessertType.user = \""
+              + username + "\" AND userDessertType.dessertType = " + typeId + ";";
+          this.executeUpdate(conn, removeType);
           this.dessertTypes(conn, username);
+          check = true;
         }
-        
-        
+        else {
+          Statement stmtId = conn.createStatement();
+          ResultSet rsId = stmtId.executeQuery(
+              "SELECT dessertType.typeId FROM dessertType WHERE dessertType.typeName = \"" + type
+                  + "\";");
+          while (rsId.next()) {
+            int id = rsId.getInt("typeId");
+            String addType = "INSERT INTO userDessertType(dessertType, user) VALUES (" + id + ", \""
+                + username + "\");";
+            this.executeUpdate(conn, addType);
+            this.dessertTypes(conn, username);
+            check = true;
+          }
+        }
       }
+
+      if (check == false) {
+        System.out.println("Invalid dessert type or input. Please try again.");
+        this.dessertTypes(conn, username);
+      }
+
     }
-    finally {}
+    finally {
+    }
   }
-  
+
   public void inventory(Connection conn, String username) throws SQLException {
     try {
-      
+
       java.sql.CallableStatement cStmt = conn.prepareCall("{CALL getInventory(?)}");
       cStmt.setString(1, username);
       ResultSet reTypes = cStmt.executeQuery();
-      
-      while(reTypes.next()){
+
+      while (reTypes.next()) {
         String ingredient = reTypes.getString("ingredientName");
         double amount = reTypes.getDouble("amount");
         String units = reTypes.getString("units");
-        System.out.println(ingredient + "          :" + amount + ", " + units);
+        System.out.println(ingredient + "                 :" + amount + ", " + units);
       }
-      
-      System.out.println("Press p to go back to profile or enter the name of an ingredient to update its amount."); // ---------- add option for adding new ingredient
+
+      System.out.println("Press p to go back to profile.");
+      System.out.println("Press a to add an ingredient.");
+      System.out.println("Enter the name of an ingredient to update its amount.");
 
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("What would you like to do?");
@@ -374,46 +415,112 @@ public class bakingapp {
       if (doWhat.equals("p")) {
         this.profile(conn, username, false);
       }
-      
-      
-      else {
-      boolean ingredientExists = false;
-      
-      java.sql.CallableStatement cStmt3 = conn.prepareCall("{CALL getInventory(?)}");
-      cStmt3.setString(1, username);
-      ResultSet reTypes2 = cStmt3.executeQuery();
-      while(reTypes2.next()) {
-        String ingredientName = reTypes2.getString("ingredientName");
-        if (doWhat.equals(ingredientName)) {
-          ingredientExists = true;
+      else if (doWhat.equals("a")) {
+        System.out.println("Ingredient: ");
+        String ingredient = myObj.nextLine(); // Read user input
+
+        Statement stmtName = conn.createStatement();
+        ResultSet rsName = stmtName.executeQuery(
+            "SELECT * FROM Ingredient WHERE ingredientName = \"" + ingredient + "\";");
+        if (rsName.next()) {
+          String units = rsName.getString("units");
+          String ingredientId = rsName.getString("ingredientId");
+          System.out.println("Amount in " + units + ":");
+          String amount = myObj.nextLine(); // Read user input
+
+          Statement stmtInventory = conn.createStatement();
+          ResultSet rsInventory = stmtName
+              .executeQuery("SELECT inventoryId FROM inventory WHERE user = \"" + username + "\";");
+          int inventoryNum = 0;
+          while (rsInventory.next()) {
+            inventoryNum = rsInventory.getInt("inventoryId");
+          }
+
+          java.sql.CallableStatement cStmtadd = conn
+              .prepareCall("{CALL addIngredientToInventory(?, ?, ?)}");
+          cStmtadd.setString(1, ingredientId);
+          cStmtadd.setInt(2, inventoryNum);
+          cStmtadd.setString(3, amount);
+          cStmtadd.executeUpdate();
+          this.inventory(conn, username);
+        }
+        else {
+          Statement stmtNewId = conn.createStatement();
+          ResultSet rsNewId = stmtNewId.executeQuery("SELECT COUNT(*) FROM Ingredient;");
+          int newId = 0;
+          while (rsNewId.next()) {
+            newId = rsNewId.getInt("COUNT(*)") + 1;
+          }
+
+          System.out.println("Units: ");
+          String units = myObj.nextLine(); // Read user input
+
+          CallableStatement cStmtadd = conn.prepareCall("{CALL newIngredient(?, ?, ?)}");
+          cStmtadd.setInt(1, newId);
+          cStmtadd.setString(2, ingredient);
+          cStmtadd.setString(3, units);
+          cStmtadd.executeUpdate();
+
+          Statement stmtInventory = conn.createStatement();
+          ResultSet rsInventory = stmtName
+              .executeQuery("SELECT inventoryId FROM inventory WHERE user = \"" + username + "\";");
+          int inventoryNum = 0;
+          while (rsInventory.next()) {
+            inventoryNum = rsInventory.getInt("inventoryId");
+          }
+
+          System.out.println("Amount in " + units + ":");
+          String amount = myObj.nextLine(); // Read user input
+
+          CallableStatement cStmtadd2 = conn
+              .prepareCall("{CALL addIngredientToInventory(?, ?, ?)}");
+          cStmtadd2.setInt(1, newId);
+          cStmtadd2.setInt(2, inventoryNum);
+          cStmtadd2.setInt(3, Integer.parseInt(amount));
+          cStmtadd2.executeUpdate();
+          this.inventory(conn, username);
         }
       }
-      
-      if(ingredientExists) {
-        
-      java.sql.CallableStatement cStmt2 = conn.prepareCall("{CALL updateInventory(?, ?, ?)}");
-      cStmt2.setString(1, username);
-      cStmt2.setString(2, doWhat);
-      System.out.println("Enter your updated amount of " + doWhat + ".");
-      String newAmount = myObj.nextLine();
-      cStmt2.setString(3, newAmount);
-      
-      ResultSet update = cStmt2.executeQuery();
-      
-      System.out.println("Ingredient updated!");
-      this.inventory(conn, username);
-      
-      
-      } else {
-        System.out.println("Ingredient entered does not exist, please try again!");
-        this.inventory(conn,  username);
-      }
+      else {
+        boolean ingredientExists = false;
+
+        java.sql.CallableStatement cStmt3 = conn.prepareCall("{CALL getInventory(?)}");
+        cStmt3.setString(1, username);
+        ResultSet reTypes2 = cStmt3.executeQuery();
+        while (reTypes2.next()) {
+          String ingredientName = reTypes2.getString("ingredientName");
+          if (doWhat.equals(ingredientName)) {
+            ingredientExists = true;
+          }
+        }
+
+        if (ingredientExists) {
+
+          java.sql.CallableStatement cStmt2 = conn.prepareCall("{CALL updateInventory(?, ?, ?)}");
+          cStmt2.setString(1, username);
+          cStmt2.setString(2, doWhat);
+          System.out.println("Enter your updated amount of " + doWhat + ".");
+          String newAmount = myObj.nextLine();
+          cStmt2.setString(3, newAmount);
+
+          ResultSet update = cStmt2.executeQuery();
+
+          System.out.println("Ingredient updated!");
+          this.inventory(conn, username);
+
+        }
+        else {
+          System.out.println("Ingredient entered does not exist, please try again!");
+          this.inventory(conn, username);
+        }
       }
 
     }
-    finally {}
-      
+    finally {
+    }
+
   }
+
   public boolean writeIngredient(int recipeId, Connection conn, String username) throws SQLException {
     try {
       
@@ -465,9 +572,10 @@ public class bakingapp {
     }
     finally {}
   }
-  
+
   // recipeId, recipeName, instructions, type, writer (Recipe)
-  public void edit(int recipeId, Connection conn, String username, boolean check) throws SQLException {
+  public void edit(int recipeId, Connection conn, String username, boolean check)
+      throws SQLException {
     try {
       System.out.println("Update Recipe Name             : Type n");
       System.out.println("Update Recipe Instructions     : Type i");
@@ -476,38 +584,40 @@ public class bakingapp {
       System.out.println("What would you like to do?");
       Scanner myObj5 = new Scanner(System.in);
       String doWhat = myObj5.nextLine();
-      
+
       if (doWhat.equals("n")) {
-        Scanner myObj = new Scanner(System.in); // Create a Scanner object              
+        Scanner myObj = new Scanner(System.in); // Create a Scanner object
         System.out.println("Enter your recipe's new name: ");
         String name = myObj.nextLine(); // Read user inputrofile(conn, username);
-        String updateName = "UPDATE Recipe SET recipeName = \"" + name + "\" WHERE recipeId = " + recipeId + ";";
+        String updateName = "UPDATE Recipe SET recipeName = \"" + name + "\" WHERE recipeId = "
+            + recipeId + ";";
         this.executeUpdate(conn, updateName);
         System.out.println("Recipe name updated!");
         check = true;
         this.edit(recipeId, conn, username, false);
-        
+
       }
-      else if(doWhat.equals("i")){
+      else if (doWhat.equals("i")) {
         Scanner myObj2 = new Scanner(System.in); // Create a Scanner object
         System.out.println("Enter your recipe's new instructions: ");
         String instructions = myObj2.nextLine(); // Read user inputrofile(conn, username);
-        String updateInstructions = "UPDATE Recipe SET instructions = \"" + instructions + "\" WHERE recipeId = " + recipeId + ";";
+        String updateInstructions = "UPDATE Recipe SET instructions = \"" + instructions
+            + "\" WHERE recipeId = " + recipeId + ";";
         this.executeUpdate(conn, updateInstructions);
         System.out.println("Recipe instructions updated!");
         check = true;
         this.edit(recipeId, conn, username, false);
       }
-      else if(doWhat.equals("v")){
+      else if (doWhat.equals("v")) {
         check = true;
         this.viewRecipes(conn, username);
       }
-      
+
       else if (doWhat.equals("p")) {
         check = true;
         this.profile(conn, username, false);
       }
-      else if(doWhat.equals("v")) {
+      else if (doWhat.equals("v")) {
         check = true;
         this.viewRecipes(conn, username);
       }
@@ -515,25 +625,30 @@ public class bakingapp {
         System.out.println("Invalid input. Please enter again.");
         this.edit(recipeId, conn, username, check);
       }
-      
+
     }
-    finally {} 
+    finally {
+    }
   }
-  
-  public void editRecipe(int recipeId, Connection conn, String username, boolean check) throws SQLException {
+
+  public void editRecipe(int recipeId, Connection conn, String username, boolean check)
+      throws SQLException {
     try {
       System.out.println("Press e to edit your recipe or press d to delete your recipe.");
       System.out.println("Press p to return to Profile or v to view recipes again");
       Scanner myObj5 = new Scanner(System.in);
       String doWhat = myObj5.nextLine();
-      
+
       if (doWhat.equals("e")) {
         this.edit(recipeId, conn, username, false);
         check = true;
-      } else if(doWhat.equals("d")){
-        String deleteWrittenRecipe = "DELETE FROM writtenRecipe WHERE writtenRecipe.recipe = " + recipeId + ";";
+      }
+      else if (doWhat.equals("d")) {
+        String deleteWrittenRecipe = "DELETE FROM writtenRecipe WHERE writtenRecipe.recipe = "
+            + recipeId + ";";
         this.executeUpdate(conn, deleteWrittenRecipe);
-        String deleteRecipeIngredient = "DELETE FROM recipeIngredient WHERE recipeIngredient.recipe = " + recipeId + ";";
+        String deleteRecipeIngredient = "DELETE FROM recipeIngredient WHERE recipeIngredient.recipe = "
+            + recipeId + ";";
         this.executeUpdate(conn, deleteRecipeIngredient);
         String deleteRecipe = "DELETE FROM Recipe WHERE Recipe.recipeId = " + recipeId + ";";
         this.executeUpdate(conn, deleteRecipe);
@@ -541,12 +656,12 @@ public class bakingapp {
         this.viewRecipes(conn, username);
         check = true;
       }
-      
+
       else if (doWhat.equals("p")) {
         this.profile(conn, username, false);
         check = true;
       }
-      else if(doWhat.equals("v")) {
+      else if (doWhat.equals("v")) {
         this.viewRecipes(conn, username);
         check = true;
       }
@@ -554,18 +669,20 @@ public class bakingapp {
         System.out.println("Invalid input. Please enter again.");
         this.editRecipe(recipeId, conn, username, check);
       }
-      
+
     }
-    finally {} 
+    finally {
+    }
   }
-  
+
   public void viewRecipes(Connection conn, String username) throws SQLException {
     try {
       System.out.println("Here are your written recipes: ");
       System.out.println("");
-      
+
       Statement stmt = conn.createStatement();
-      ResultSet rs = stmt.executeQuery("SELECT * FROM Recipe HAVING writer = \"" + username + "\";");
+      ResultSet rs = stmt
+          .executeQuery("SELECT * FROM Recipe HAVING writer = \"" + username + "\";");
       while (rs.next()) {
         String instructions = rs.getString("instructions");
         String RecipeName = rs.getString("recipeName");
@@ -574,45 +691,44 @@ public class bakingapp {
         System.out.println(instructions);
         System.out.println("");
       }
-    
+
       System.out.println("Press p to return to profile or enter a recipe ID to edit that recipe.");
       Scanner myObj5 = new Scanner(System.in);
       String doWhat = myObj5.nextLine();
-      
+
       if (doWhat.equals("p")) {
         this.profile(conn, username, false);
-        
-      } else {
+
+      }
+      else {
         this.editRecipe(Integer.parseInt(doWhat), conn, username, false);
       }
     }
-    finally {}
-      
+    finally {
+    }
+
   }
-  
-  
+
   // recipeId, recipeName, instructions, type, writer (Recipe)
   // recipe, writer, dateWritten (writtenRecipe)
   // recipe, ingredient, amount (recipeIngredient)
   public void write(Connection conn, String username, boolean check) throws SQLException {
     try {
-   
+
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("Name of recipe: ");
       String recipeName = myObj.nextLine(); // Read user inputrofile(conn, username);
-     
-      
+
       System.out.println("");
-      
+
       Scanner myObj2 = new Scanner(System.in); // Create a Scanner object
       System.out.println("Enter your recipe's instructions: ");
       String Instructions = myObj2.nextLine(); // Read user inputrofile(conn, username);
-      //myObj2.close();
-      
+      // myObj2.close();
+
       System.out.println("");
       System.out.println("Available dessert types: ");
-      
-      
+
       Statement stmt = conn.createStatement();
       ResultSet rs = stmt.executeQuery("SELECT * FROM dessertType;");
       while (rs.next()) {
@@ -620,44 +736,44 @@ public class bakingapp {
         String typeId = rs.getString("typeId");
         System.out.println(type + ":         " + typeId);
       }
-      
+
       System.out.println("Enter one of the available dessert type IDs: ");
       Scanner myObj3 = new Scanner(System.in);
       String dessertType = myObj3.nextLine(); // Read user inputrofile(conn, username);
-      //myObj3.close();
-      
+      // myObj3.close();
+
       System.out.println("Enter date in YYYY-MM-DD format: ");
       Scanner myObj4 = new Scanner(System.in);
       String date = myObj4.nextLine(); // Read user inputrofile(conn, username);
-      //myObj4.close();
-      
-     
+      // myObj4.close();
+
       Statement stmt2 = conn.createStatement();
       ResultSet rs2 = stmt2.executeQuery("SELECT COUNT(*) FROM Recipe;");
       int newRecipeId = 0;
-      while(rs2.next()){
-      newRecipeId = rs2.getInt("COUNT(*)") + 1;
+      while (rs2.next()) {
+        newRecipeId = rs2.getInt("COUNT(*)") + 1;
       }
-      
+
       Statement stmt3 = conn.createStatement();
-      stmt3.executeUpdate("INSERT INTO Recipe(recipeId, recipeName, instructions, type, writer) VALUES (" 
-          + newRecipeId + ", \"" + recipeName + "\", \"" + Instructions + "\", " + dessertType + ", \"" + username + "\");");
-      
-      
+      stmt3.executeUpdate(
+          "INSERT INTO Recipe(recipeId, recipeName, instructions, type, writer) VALUES ("
+              + newRecipeId + ", \"" + recipeName + "\", \"" + Instructions + "\", " + dessertType
+              + ", \"" + username + "\");");
+
       Statement stmt4 = conn.createStatement();
-      stmt4.executeUpdate("INSERT INTO writtenRecipe(recipe, writer, dateWritten) VALUES (" 
+      stmt4.executeUpdate("INSERT INTO writtenRecipe(recipe, writer, dateWritten) VALUES ("
           + newRecipeId + ", \"" + username + "\", \"" + date + "\");");
-      
+
       boolean repeat = true;
-      
-      while(repeat) {
+
+      while (repeat) {
         repeat = this.writeIngredient(newRecipeId, conn, username);
       }
-      
+
       System.out.println("All ingredients added and recipe entered! Press p to return to Profile.");
       Scanner myObj5 = new Scanner(System.in);
       String doWhat = myObj5.nextLine();
-      
+
       if (doWhat.equals("p")) {
         this.profile(conn, username, false);
         check = true;
@@ -667,10 +783,20 @@ public class bakingapp {
         this.write(conn, username, check);
       }
     }
-    finally {}
-      
+    catch (java.sql.SQLSyntaxErrorException e) {
+      System.out.println("Invalid dessert type. Try again");
+      this.write(conn, username, check);
+    }
+    catch (SQLException f) {
+      System.out.println("Invalid date. Try again.");
+      f.printStackTrace();
+      this.write(conn, username, check);
+    }
+    finally {
+    }
+
   }
-  
+
   public void writeView(Connection conn, String username, boolean check) throws SQLException {
     try {
       System.out.println("Write a New Recipe                    : Type w");
@@ -680,8 +806,7 @@ public class bakingapp {
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("What would you like to do?");
       String doWhat = myObj.nextLine(); // Read user input
-      
-      
+
       if (doWhat.equals("w")) {
         this.write(conn, username, false);
         check = true;
@@ -699,11 +824,11 @@ public class bakingapp {
         this.writeView(conn, username, check);
       }
     }
-    finally {}
-      
+    finally {
+    }
+
   }
-  
-  
+
   public void profile(Connection conn, String username, boolean check) throws SQLException {
     try {
       System.out.println("Update Account                        : Type a");
@@ -732,13 +857,18 @@ public class bakingapp {
         this.writeView(conn, username, false);
         check = true;
       }
+      else if (doWhat.equals("h")) {
+        this.home(conn, username, check);
+        check = true;
+      }
       else if (check == false) {
         System.out.println("invalid input. Please enter again.");
         this.profile(conn, username, check);
       }
     }
-    finally {}
-      
+    finally {
+    }
+
   }
 
   public void home(Connection conn, String username, boolean check) throws SQLException {
@@ -748,7 +878,6 @@ public class bakingapp {
       System.out.println("    View RECOMMENDED RECIPES                 : Type r");
       System.out.println("    View your SAVED recipes                  : Type s ");
       System.out.println("    Log Out                                  : Type o ");
-
 
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
       System.out.println("What would you like to do?");
@@ -796,7 +925,7 @@ public class bakingapp {
     finally {
     }
   }
-  
+
   public void savedRecipe(Connection conn, int num, String user, boolean check) {
     try {
       java.sql.CallableStatement cStmt = conn.prepareCall("{CALL viewRecipe(?)}");
@@ -805,14 +934,15 @@ public class bakingapp {
       while (reRecipe.next()) {
         String name = reRecipe.getString("recipeName");
         String instructions = reRecipe.getString("instructions");
-        
+
         System.out.println(name);
         System.out.println("");
         System.out.println(instructions);
         System.out.println("");
         System.out.println("");
-        
-        java.sql.CallableStatement cStmtIngredReq = conn.prepareCall("{CALL missingIngredientAmounts(?, ?)}");
+
+        java.sql.CallableStatement cStmtIngredReq = conn
+            .prepareCall("{CALL missingIngredientAmounts(?, ?)}");
         cStmtIngredReq.setString(1, user);
         cStmtIngredReq.setInt(2, num);
         ResultSet reIngredReq = cStmtIngredReq.executeQuery();
@@ -821,25 +951,41 @@ public class bakingapp {
           String ingredient = reIngredReq.getString("ingredientName");
           String amtRequired = reIngredReq.getString("amtOfIngredientRequired");
           String units = reIngredReq.getString("units");
-          
+
           if (amtRequired == null) {
-            amtRequired = "We don't know how much " + ingredient + " you have! Update your inventory!";
+            int id = 0;
+            Statement stmtId = conn.createStatement();
+            ResultSet rsId = stmtId
+                .executeQuery("SELECT ingredientId FROM Ingredient WHERE ingredientName = \""
+                    + ingredient + "\";");
+            while (rsId.next()) {
+              id = rsId.getInt("ingredientId");
+            }
+
+            Statement stmtAmt = conn.createStatement();
+            ResultSet fullAmt = stmtAmt
+                .executeQuery("SELECT amount FROM recipeIngredient WHERE recipeIngredient.recipe = "
+                    + num + " AND recipeIngredient.ingredient = " + id + ";");
+            while (fullAmt.next()) {
+              amtRequired = fullAmt.getString("amount");
+            }
           }
-          
+
           System.out.println("        " + ingredient + ": " + amtRequired + " " + units);
         }
-        
+
         Scanner myObj = new Scanner(System.in); // Create a Scanner object
-        System.out
-            .println("Type 'u' if you would like to unsave this recipe. Type 'b' to go back to see your saved recipes.");
+        System.out.println(
+            "Type 'u' if you would like to unsave this recipe. Type 'b' to go back to see your saved recipes.");
         String rChoice = myObj.nextLine(); // Read user input
-        
+
         if (rChoice.equals("b")) {
           this.Saved(conn, user);
           check = true;
         }
         else if (rChoice.equals("u")) {
-          String unsaveRecipe = "DELETE FROM saves WHERE saves.user = \"" + user + "\" AND saves.recipe = " + num + ";";
+          String unsaveRecipe = "DELETE FROM saves WHERE saves.user = \"" + user
+              + "\" AND saves.recipe = " + num + ";";
           this.executeUpdate(conn, unsaveRecipe);
           System.out.println("Recipe unsaved");
           System.out.println("");
@@ -850,7 +996,7 @@ public class bakingapp {
           System.out.println("invalid input. Please enter again.");
           this.savedRecipe(conn, num, user, check);
         }
-        
+
       }
     }
     catch (SQLException e) {
@@ -859,10 +1005,9 @@ public class bakingapp {
     }
     finally {
     }
-    
-    
+
   }
-  
+
   public void aRecipe(Connection conn, int num, String user) {
     try {
       java.sql.CallableStatement cStmt = conn.prepareCall("{CALL viewRecipe(?)}");
@@ -871,52 +1016,51 @@ public class bakingapp {
       while (reRecipe.next()) {
         String name = reRecipe.getString("recipeName");
         String instructions = reRecipe.getString("instructions");
-        
+
         System.out.println(name);
         System.out.println("");
         System.out.println(instructions);
       }
-      
+
       java.sql.CallableStatement cStmtSaved = conn.prepareCall("{CALL aSavedRecipe(?, ?)}");
       cStmtSaved.setInt(1, num);
       cStmtSaved.setString(2, user);
       ResultSet savedRecipe = cStmtSaved.executeQuery();
       if (savedRecipe.next()) {
-      Scanner myObj = new Scanner(System.in); // Create a Scanner object
-      System.out
-          .println("This recipe is saved! Type 'b' to go back to browse recipes.");
-      String rChoice = myObj.nextLine(); // Read user input
-      
-      if (rChoice.equals("b")) {
-        this.Recommended(conn, user);
-      }
+        Scanner myObj = new Scanner(System.in); // Create a Scanner object
+        System.out.println("This recipe is saved! Type 'b' to go back to browse recipes.");
+        String rChoice = myObj.nextLine(); // Read user input
+
+        if (rChoice.equals("b")) {
+          this.Recommended(conn, user);
+        }
       }
       else {
         Scanner myObj = new Scanner(System.in); // Create a Scanner object
         System.out
             .println("Type 's' to save this recipe or type 'b' to go back to browse recipes.");
         String rChoice = myObj.nextLine(); // Read user input
-        
+
         if (rChoice.equals("b")) {
           this.Recommended(conn, user);
         }
-        if (rChoice.equals("s"))  {
-          java.sql.CallableStatement cStmtInsertRecipe = conn.prepareCall("{CALL saveRecipe(?, ?)}");
+        if (rChoice.equals("s")) {
+          java.sql.CallableStatement cStmtInsertRecipe = conn
+              .prepareCall("{CALL saveRecipe(?, ?)}");
           cStmtInsertRecipe.setInt(1, num);
           cStmtInsertRecipe.setString(2, user);
           ResultSet saveRecipe = cStmtInsertRecipe.executeQuery();
           System.out.println("");
-          System.out
-              .println("Recipe saved! Type 'b' to go back to browse recipes.");
+          System.out.println("Recipe saved! Type 'b' to go back to browse recipes.");
           String rNextChoice = myObj.nextLine(); // Read user input
-          
+
           if (rNextChoice.equals("b")) {
             this.Recommended(conn, user);
           }
-          
+
         }
-      
-    }
+
+      }
     }
     catch (SQLException e) {
       // TODO Auto-generated catch block
@@ -983,7 +1127,7 @@ public class bakingapp {
     try {
       int count = 0;
       while (rsSaved.next()) {
-        count ++;
+        count++;
         String id = rsSaved.getString("recipeId");
         String name = rsSaved.getString("recipeName");
         String type = rsSaved.getString("typeName");
@@ -993,12 +1137,13 @@ public class bakingapp {
         System.out.println("        writer: " + writer);
         System.out.println("");
       }
-      
+
       if (count > 0) {
         Scanner myObj = new Scanner(System.in); // Create a Scanner object
-        System.out.println("Type 'h' to go back to the Home page or type the recipe number to view recipe.");
+        System.out.println(
+            "Type 'h' to go back to the Home page or type the recipe number to view recipe.");
         String rChoice = myObj.nextLine(); // Read user input
-        
+
         if (rChoice.equals("h")) {
           this.home(conn, username, false);
         }
@@ -1012,12 +1157,11 @@ public class bakingapp {
         Scanner myObj = new Scanner(System.in); // Create a Scanner object
         System.out.println("Type 'h' to go back to the Home page.");
         String rChoice = myObj.nextLine(); // Read user input
-        
+
         if (rChoice.equals("h")) {
           this.home(conn, username, false);
         }
       }
-
 
     }
     finally
@@ -1027,31 +1171,41 @@ public class bakingapp {
     }
 
   }
-  
+
   public void login(String username, Connection conn) throws SQLException {
     try {
       Scanner myObj = new Scanner(System.in); // Create a Scanner object
-      System.out.println(
-          "Enter the number 1 if you have an account,or enter 2 if you want to make an account:");
-      String logChoice = myObj.nextLine(); // Read user input
-      int choice = Integer.parseInt(logChoice);
+      boolean check = false;
 
-      // here im making user input that will then go to an if statement with two trys
-      // one for loggin in and one for making an account,
-      // then being redirected to login
+      while (check == false) {
+        System.out.println(
+            "Enter the number 1 if you have an account,or enter 2 if you want to make an account:");
+        String logChoice = myObj.nextLine(); // Read user input
+        int choice = Integer.parseInt(logChoice);
 
-      if (choice == 1) {
-        while (username == null) {
-          username = this.loggedIn(conn);
+        // here im making user input that will then go to an if statement with two trys
+        // one for loggin in and one for making an account,
+        // then being redirected to login
+
+        if (choice == 1) {
+          while (username == null) {
+            username = this.loggedIn(conn);
+          }
+          System.out.println("User logged in.");
+          check = true;
         }
-        System.out.println("User logged in.");
-      }
 
-      if (choice == 2) {
-        while (username == null) {
-          username = this.makeAcc(conn);
+        else if (choice == 2) {
+          while (username == null) {
+            username = this.makeAcc(conn);
+          }
+          System.out.println("User signed up.");
+          check = true;
         }
-        System.out.println("User signed up.");
+        else {
+          System.out.println("Invalid input. Please try again.");
+          this.login(username, conn);
+        }
       }
     }
     finally {
@@ -1059,7 +1213,7 @@ public class bakingapp {
     }
 
     try {
-     this.home(conn, username, false);
+      this.home(conn, username, false);
     }
     finally {
     }
@@ -1067,7 +1221,8 @@ public class bakingapp {
 
   /**
    * Connect to MySQL and do some stuff.
-   * @throws SQLException 
+   * 
+   * @throws SQLException
    */
   public void run() throws SQLException {
     String username = null;
@@ -1091,11 +1246,11 @@ public class bakingapp {
    * Connect to the DB and do some stuff
    * 
    * @param args
-   * @throws SQLException 
+   * @throws SQLException
    */
   public static void main(String[] args) throws SQLException {
     bakingapp app = new bakingapp();
     app.run();
-    
+
   }
 }

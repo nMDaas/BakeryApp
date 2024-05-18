@@ -10,11 +10,12 @@ For our project submission, we wrote our Java code using Eclipse software, our S
 
 https://www.youtube.com/watch?v=SDrPWiDJAWk 
 
-## UML Diagram
+## How to Run 
+To run our database, download the SQL file and make sure all tables, values, procedures, functions, and triggers are inserted or created into the bakeryapp database. Next, download the Java bakingapp file and load it into eclipse or your preferred platform for running java code. Next, run the java program. It should automatically prompt the user in the console after you have hit the run button.
 
-![Image of Key](https://github.com/nMDaas/BakeryApp/blob/main/UML.jpg)
+## Logical Design
+<img src="https://github.com/nMDaas/BakeryApp/blob/main/UML.jpg" width="500" height="500">
 
 ## User Activity Diagram
-
-![Image of Key](https://github.com/nMDaas/BakeryApp/blob/main/userActivity.jpg)
+<img src="https://github.com/nMDaas/BakeryApp/blob/main/userActivity.jpg" width="500" height="500">
 
